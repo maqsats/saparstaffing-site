@@ -3,8 +3,12 @@
   var form=document.getElementById('apply-form');
   if(!form)return;
   var status=document.getElementById('form-status'), btn=document.getElementById('submit-btn');
-  // The form is only delivered on the real site (Netlify Forms); anywhere else it shows a preview note.
-  var live=/(^|\.)saparstaffing\.com$|netlify\.app$/.test(location.hostname);
+  // Requests go through FormSubmit (formsubmit.co), which emails each one to the inbox below.
+  // The inbox owner confirms it once, from the first email FormSubmit sends there.
+  var INBOX='saparali@saparstaffing.com';
+  var ENDPOINT='https://formsubmit.co/ajax/'+INBOX;
+  // Only the published site sends; local previews show a note instead, so testing never emails anyone.
+  var live=/(^|\.)saparstaffing\.com$|^maqsats\.github\.io$|\.netlify\.app$/.test(location.hostname);
 
   var other=document.getElementById('role-other'), otherWrap=document.getElementById('other-wrap'), otherInput=document.getElementById('other-roles');
   other.addEventListener('change',function(){
@@ -29,6 +33,28 @@
     status.scrollIntoView({block:'nearest',behavior:'smooth'});
   }
 
+  // One row per field in the email. Several ticked positions become one comma-separated line;
+  // empty optional fields, the Netlify form name and the honeypot are left out.
+  function payload(){
+    var out={};
+    new FormData(form).forEach(function(v,k){
+      if(k==='form-name'||k==='company_website')return;
+      v=String(v).trim();
+      if(!v)return;
+      out[k]=out[k]?out[k]+', '+v:v;
+    });
+    var body=new URLSearchParams(out);
+    body.set('_subject','Staffing request: '+(out.business||'new employer'));
+    body.set('_template','table');
+    body.set('_captcha','false');
+    return body;
+  }
+
+  function failed(){
+    show('The request did not go through. Please email '+INBOX+' instead.',false);
+    btn.disabled=false;btn.textContent='Send request';
+  }
+
   form.addEventListener('submit',function(e){
     e.preventDefault();
     var bad=form.querySelector('input:invalid,select:invalid,textarea:invalid');
@@ -40,15 +66,18 @@
       return;
     }
     if(!live){
-      show('Preview only: on saparstaffing.com this request is sent to saparali@saparstaffing.com, then the visitor sees the thank-you page.',true);
+      show('Preview only: on the live site this request is emailed to '+INBOX+', then the visitor sees the thank-you page.',true);
       return;
     }
+    // A filled honeypot means a bot: send nothing, but behave as if it worked.
+    if(form.elements.company_website.value){location.href='thank-you.html';return;}
     btn.disabled=true;btn.textContent='Sending…';
-    var data=new URLSearchParams(new FormData(form)).toString();
-    fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:data})
-      .then(function(r){if(!r.ok)throw 0;location.href='thank-you.html';})
-      .catch(function(){show('The request did not go through. Please email saparali@saparstaffing.com instead.',false);})
-      .then(function(){btn.disabled=false;btn.textContent='Send request';});
+    fetch(ENDPOINT,{method:'POST',headers:{'Accept':'application/json'},body:payload()})
+      .then(function(r){return r.json().catch(function(){return {};}).then(function(j){
+        if(!r.ok||String(j.success)!=='true')throw new Error(j.message||('HTTP '+r.status));
+        location.href='thank-you.html';
+      });})
+      .catch(failed);
   });
 })();
 

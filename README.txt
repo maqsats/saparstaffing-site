@@ -1,5 +1,6 @@
 Sapar Staffing - saparstaffing.com
-Static site (HTML/CSS/vanilla JS, no build step). Planned host: Netlify.
+Static site (HTML/CSS/vanilla JS, no build step). Hosted on GitHub Pages: https://maqsats.github.io/saparstaffing-site/ (repo maqsats/saparstaffing-site, branch main, folder root).
+Publish a change: commit and push to main; Pages rebuilds in about a minute.
 
 index.html       main page
 privacy.html     privacy policy
@@ -16,7 +17,10 @@ Font: Google Fonts - Parkinsans (one family for everything).
 Photos are 600-720 px wide, so the layout never shows them much wider than ~400 CSS px.
 og-image.png is a 1200x630 screenshot of ../og-image-source.html (kept outside this folder so it is not deployed).
 
-Form: Netlify Forms (data-netlify="true", form-name "employer-request", honeypot field).
-JS posts it via fetch only when hostname is saparstaffing.com or *.netlify.app, then redirects to thank-you.html.
-On other hosts (local preview) it shows "Preview only" instead of sending.
-Do not rename form fields: the name attributes are what Netlify records.
+Form: assets/site.js sends it to FormSubmit (https://formsubmit.co/ajax/saparali@saparstaffing.com), which emails
+each request to that inbox as a table, with the employer's email as Reply-To, then the visitor sees thank-you.html.
+FormSubmit needs a one-time confirmation: the first submission sends an "Activate Form" email to the inbox; click it.
+It only sends on saparstaffing.com, maqsats.github.io and *.netlify.app; local previews show "Preview only".
+The honeypot field company_website is checked in the script: if a bot fills it, nothing is sent.
+The data-netlify attributes are kept so the same form also works with Netlify Forms if the site moves to Netlify.
+Do not rename form fields: the name attributes become the rows of the email.
